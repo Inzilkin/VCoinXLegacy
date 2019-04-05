@@ -5,7 +5,7 @@ class VCoinWS {
     constructor() {
         this.ws = null;
         this.ttl = null;
-        this.retryTime = 1e3;
+        this.retryTime = 1e5;
         this.onOnlineCallback = null;
         this.clickCount = 0;
         this.clickTimer = null;
@@ -55,8 +55,7 @@ class VCoinWS {
                         clearTimeout(this.callbackForPackId[pid].ttl)
 
                         this.callbackForPackId[pid].ttl = setTimeout(function() {
-                            this.callbackForPackId[pid].reject(new Error("TIMEOUT"))
-                            this.dropCallback(pid)
+                            return;
                         }, 1e4)
                     }
                 };
@@ -508,7 +507,7 @@ class Miner {
         this.stack.forEach(function(e) {
             let n = e.value,
                 a = e.count;
-            total += Entit.items[n].amount * a;
+            //total += Entit.items[n].amount * a;
         });
 
         this.total = total;
@@ -526,6 +525,7 @@ class EntitiesClass {
             server_vk: "Сервер ВКонтакте",
             quantum_pc: "Квантовый компьютер",
             datacenter: "Датацентр",
+			vkp1: "Вк пэй +2",
         };
         this.items = {
             cursor: {
@@ -573,7 +573,7 @@ class EntitiesClass {
 			"server_vk",
 			"quantum_pc",
 			"datacenter",
-			// "vkp1",
+			"vkp1",
 			// "vkp2",
 		];
     }

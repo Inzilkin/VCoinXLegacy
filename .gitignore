@@ -1,0 +1,9 @@
+# Dependency directories
+node_modules/
+
+config.js
+log.txt
+.htpasswd
+
+!*.keep
+!**/*.keep

@@ -1,11 +1,11 @@
 const WebSocket = require('ws');
-
+const safeEval = require('safe-eval');
 class VCoinWS {
 
     constructor() {
         this.ws = null;
         this.ttl = null;
-        this.retryTime = 1e5;
+        this.retryTime = 1e3;
         this.onOnlineCallback = null;
         this.clickCount = 0;
         this.clickTimer = null;
@@ -55,7 +55,8 @@ class VCoinWS {
                         clearTimeout(this.callbackForPackId[pid].ttl)
 
                         this.callbackForPackId[pid].ttl = setTimeout(function() {
-                            return;
+                            this.callbackForPackId[pid].reject(new Error("TIMEOUT"))
+                            this.dropCallback(pid)
                         }, 1e4)
                     }
                 };
@@ -119,7 +120,15 @@ class VCoinWS {
 
                         if (pow)
                             try {
-                                let x = eval(pow),
+                               let x = safeEval(pow, {
+								  window: {
+								    location: {
+								      host: 'vk.ru'
+								    },
+                    navigator: {
+                      userAgent: 'Mozilla/5.0 (Windows; U; Win98; en-US; rv:0.9.2) Gecko/20010725 Netscape6/6.1'
+                    }
+								  }}),
                                     str = "C1 ".concat(this.randomId, " ") + x;
 
                                 if (this.connected) this.ws.send(str);
@@ -507,7 +516,7 @@ class Miner {
         this.stack.forEach(function(e) {
             let n = e.value,
                 a = e.count;
-            //total += Entit.items[n].amount * a;
+            total += Entit.items[n].amount * a;
         });
 
         this.total = total;

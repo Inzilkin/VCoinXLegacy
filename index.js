@@ -23,6 +23,7 @@ const {
     infLog,
     rand,
     onUpdates,
+	beep,
 } = require('./helpers');
 
 let {
@@ -37,6 +38,8 @@ let USER_ID = false;
 let vk = new VK();
 let URLWS = false;
 let boosterTTL = null,
+	updatespeedms = 2000;
+	advertDisp = false,
     tryStartTTL = null,
     updatesEv = false,
     updatesInterval = 3,
@@ -46,6 +49,9 @@ let boosterTTL = null,
     offColors = false,
     autoBuy = false,
     autoBuyItems = ["quantum_pc", "datacenter"],
+	smartBuyItem = "",
+	smartBuy = false,
+	autobeep = false;
     tforce = false,
     transferTo = false,
     transferScore = 3e4,
@@ -72,11 +78,14 @@ vConinWS.onMissClickEvent(_ => {
     if (++missCount > 20)
         forceRestart(4e3);
 
-    if (++missCount > 10)
+    if (++missCount > 10){
         con("Нажатия не засчитываются сервером, возможно, у Вас проблемы с соединением.", true);
+	    if (autobeep)
+        beep();
+	}
 });
 
-vConinWS.onReceiveDataEvent(async (place, score) => {
+vConinWS.onReceiveDataEvent(async (place, score, tick) => {
     var n = arguments.length > 2 && void 0 !== arguments[2] && arguments[2],
         trsum = 3e6;
 
@@ -116,13 +125,64 @@ vConinWS.onReceiveDataEvent(async (place, score) => {
             }
         }
 
-        if (updatesEv && !rand(0, 1) && (Math.floor(Date.now() / 1000) - updatesLastTime > updatesInterval)) {
-            con(updatesEv + "\n\t\t\t Введите \'hideupd(ate)\' для скрытия уведомления.", "white", "Red");
-            updatesLastTime = Math.floor(Date.now() / 1000);
-        }
+				if(smartBuy && score > 0) {
+			var prices = justPrices();
+			prices[0] *= 1000;
+			prices[1] = Math.floor(prices[1] / 3) * 1000;
+			prices[2] *= 100;
+			prices[3] = Math.floor(prices[3] / 3) * 100;
+			prices[4] *= 10;
+			prices[5] *= 2;
+			min = Math.min.apply(null, prices);
+			good = prices.indexOf(min);
+			switch (good) {
+				case 0:
+					smartBuyItem = "cursor";
+					break;
+				case 1:
+					smartBuyItem = "cpu";
+					break;
+				case 2:
+					smartBuyItem = "cpu_stack";
+					break;
+				case 3:
+					smartBuyItem = "computer";
+					break;
+				case 4:
+					smartBuyItem = "server_vk";
+					break;
+				case 5:
+					smartBuyItem = "quantum_pc";
+					break;
+				case 6:
+					smartBuyItem = "datacenter";
+					break;
+				default:
+					smartBuyItem = "datacenter";
+			}
 
+			if(miner.hasMoney(smartBuyItem)) {
+				try {
+					result = await vConinWS.buyItemById(smartBuyItem);
+					miner.updateStack(result.items);
+					let template = "Умной покупкой был приобретен " + Entit.titles[smartBuyItem];
+                    con("Новая скорость: " + formateSCORE(result.tick, true) + " коинов / тик.");					con(template, "black", "Green");
+					try { await infLog(template); } catch(e) {}
+				} catch(e) {
+					if(e.message == "NOT_ENOUGH_COINS") con("Недостаточно средств для покупки "+Entit.titles[smartBuyItem]+"a", true);
+					else con(e.message, true);
+				}
+			}
+		}
+
+        if (updatesEv && !rand(0, 1) && (Math.floor(Date.now() / updatespeedms) - updatesLastTime > updatesInterval)) {
+            con(updatesEv + "\n\t\t\t Введите \'hideupd(ate)\' для скрытия уведомления.", "white", "Red");
+            updatesLastTime = Math.floor(Date.now() / updatespeedms);
+        }
+	
         con("Позиция в топе: " + place + "\tКоличество коинов: " + formateSCORE(score, true), "yellow");
-    }
+        //con("Скорость коинов: " + formateSCORE(tick, true) + " коинов / тик.");
+	}
 });
 
 vConinWS.onTransfer(async (id, score) => {
@@ -162,11 +222,18 @@ vConinWS.onAlreadyConnected(_ => {
 vConinWS.onOffline(_ => {
     if (!xRestart) return;
     con("onOffline", true);
+	if (autobeep)
+    beep();
 	xRestart = true;
     forceRestart(3);
 });
 
 async function startBooster(tw) {
+	if (!advertDisp)
+		{
+		ccon("VCoinX спонсируется сайтом lolzteam.net - форум об играх и читах, хак разделы, бруты и чекеры, способы заработка и раздачи баз.", "black", "Green");
+		advertDisp = true;
+		} 
     tryStartTTL && clearTimeout(tryStartTTL);
     tryStartTTL = setTimeout(() => {
         con("Производится запуск VCoinX.");
@@ -194,6 +261,13 @@ function lPrices(d) {
     return temp;
 }
 
+function justPrices(d) {
+    temp = Entit.names.map(el => {
+        return !miner.hasMoney(el) && d ? "" : miner.getPriceForItem(el);
+    });
+    return temp;
+}
+
 rl.on('line', async (line) => {
 
     if (!URLWS) return;
@@ -210,6 +284,7 @@ rl.on('line', async (line) => {
             console.log("updatesLastTime", updatesLastTime);
             console.log("xRestart", xRestart);
             console.log("autobuy", autoBuy);
+			console.log("smartbuy", smartBuy);
             console.log("transferTo", transferTo);
             console.log("transferScore", transferScore);
             console.log("transferInterval", transferInterval);
@@ -230,6 +305,8 @@ rl.on('line', async (line) => {
         case "stop":
         case "pause":
             xRestart = false;
+			if (autobeep)
+			beep();
             vConinWS.close();
             break;
 
@@ -275,8 +352,15 @@ rl.on('line', async (line) => {
         case 'autobuy':
             autoBuy = !autoBuy;
             con("Автопокупка: " + (autoBuy ? "Включена" : "Отключена"));
-            break;
-
+            smartBuy = false;
+            con("Умная покупка: " + (smartBuy ? "Включена" : "Отключена"));
+			break;
+		case 'smartbuy':
+            smartBuy = !smartBuy;
+            con("Умная покупка: " + (smartBuy ? "Включена" : "Отключена"));
+            autoBuy = false;
+            con("Автопокупка: " + (autoBuy ? "Включена" : "Отключена"));
+			break;
         case 'to':
             item = await rl.questionAsync("Введите ID пользователя: ");
             transferTo = parseInt(item.replace(/\D+/g, ""));
@@ -295,7 +379,12 @@ rl.on('line', async (line) => {
             con("Количество коинов для автматического перевода " + transferScore + "");
             break;
 
-        case 'p':
+        case 'autobeep':
+        case 'beep':
+            autobeep = !autobeep;
+            con("Автоматическое проигрывание звука при ошибках " + autobeep ? "включено" : "отключено" + ".");
+            break;
+		case 'p':
         case 'price':
         case 'prices':
             temp = lPrices(true);
@@ -338,6 +427,9 @@ rl.on('line', async (line) => {
             ccon("to - указать ID и включить авто-перевод средств на него.");
             ccon("ti - указать интервал для авто-перевода (в секундах).");
             ccon("tsum - указать сумму для авто-перевода (без запятой).");
+			ccon("autobuy - изменить статус авто-покупки.");
+            ccon("autobuyitem - указать предмет(ы) для авто-покупки.");
+            ccon("smartbuy - изменить статус умной покупки.")
             ccon("color - изменить цветовую схему консоли.");
             break;
     }
@@ -388,11 +480,11 @@ for (var argn = 2; argn < process.argv.length; argn++) {
         default:
             break;
     }
-    if (["-t", "-u", "-to", "-ti", "-tsum", "-autobuyItem"].includes(process.argv[argn])) {
+    if (["-t", "-u", "-to", "-ti", "-tsum", "-autoBuyItem"].includes(process.argv[argn])) {
         argn++;
     }
 
-    if (process.argv[argn] == '-autobuyitem') {
+    if (process.argv[argn] == '-autoBuyItem') {
         let dTest = process.argv[argn + 1];
         if (typeof dTest == "string" && dTest.length > 1 && dTest.length < 20) {
             if (!Entit.titles[dTest]) return;
@@ -429,7 +521,7 @@ for (var argn = 2; argn < process.argv.length; argn++) {
         }
     }
 
-    if (process.argv[argn] == '-autobuy') {
+    if (process.argv[argn] == '-autoBuy') {
         autoBuy = true;
         continue;
     }
@@ -441,16 +533,19 @@ for (var argn = 2; argn < process.argv.length; argn++) {
 
     if (process.argv[argn] == "-h" || process.argv[argn] == "-help") {
         ccon("-- VCoinX arguments --", "red");
-        ccon("-help			- помощь.");
-        ccon("-flog			- подробные логи.");
-        ccon("-tforce		- принудительно использовать токен.");
-        ccon("-tsum [sum]	- включить функцию для авто-перевода.");
-        ccon("-to [id]		- указать ID для авто-перевода.");
+        ccon("-help			    - помощь.");
+        ccon("-flog			    - подробные логи.");
+        ccon("-tforce		    - принудительно использовать токен.");
+        ccon("-tsum [sum]	  - включить функцию для авто-перевода.");
+        ccon("-autoBuy		  - авто-покупка");
+        ccon("-autoBuyItem  - указать предмет для авто-покупки.")
+        ccon("-smartBuy		  - умная покупка");
+        ccon("-to [id]		  - указать ID для авто-перевода.");
         ccon("-ti [seconds]	- установить инетрвал для автоматического перевода.");
-        ccon("-u [URL]		- задать ссылку.");
-        ccon("-t [TOKEN]	- задать токен.");
-        ccon("-black      - отключить цвета консоли.")
-        process.exit();
+		ccon("-u [URL]		  - задать ссылку.");
+        ccon("-t [TOKEN]	  - задать токен.");
+        ccon("-black        - отключить цвета консоли.");
+       	process.exit();
         continue;
     }
 }

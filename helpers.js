@@ -112,29 +112,6 @@ function hashPassCoin(e, t) {
 }
 
 
-function checkUpdates() {
-    GitCUpdate.files(['package.json'], (err, results) => {
-        if (err) return;
-        results.forEach(file => {
-            let c = file.contents.toString();
-            if (c[0] === "{") {
-                let data = JSON.parse(c);
-
-                let msg = (data.version > pJson.version) ? "Было выпущено новое обновление! -> github.com/cursedseal/VCoinX \t[" + (data.version + "/" + pJson.version) + "]" :
-                    (data.version != pJson.version) ? "Вы используете модифицированную версию, рекомендуем использовать оригинальную! -> github.com/cursedseal/VCoinX \t[" + (data.version + "/" + pJson.version) + "]" :
-                    false;
-                if (msg) {
-                    if (onUpdatesCB) onUpdatesCB(msg);
-                    else con(msg, "white", "Red");
-                }
-            }
-        });
-    });
-}
-
-checkUpdateTTL = setInterval(checkUpdates, 1e7);
-checkUpdates();
-
 function rand(min, max) {
     if (max === undefined)
         max = min;
@@ -169,7 +146,9 @@ function writeFileAsync(path, data) {
 function appendFileAsync(path, data) {
     return new Promise((resolve, reject) => fs.appendFile(path, data, err => resolve(err)));
 }
-
+function beep() {
+    process.stdout.write('\x07');
+}
 module.exports = {
     rl,
     con,
@@ -178,13 +157,11 @@ module.exports = {
     offColors,
     formateSCORE,
     hashPassCoin,
-    checkUpdates,
-    checkUpdateTTL,
-    onUpdates: cb => (onUpdatesCB = cb, true),
     existsFile,
     existsAsync,
     writeFileAsync,
     appendFileAsync,
     infLog,
     rand,
+	beep,
 }

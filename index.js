@@ -34,12 +34,11 @@ let {
 
 let USER_ID = false;
 
-
 let vk = new VK();
 let URLWS = false;
 let boosterTTL = null,
-	updatespeedms = 2000;
-	advertDisp = false,
+	updatespeedms = 4;
+	advertDisp = true,
     tryStartTTL = null,
     updatesEv = false,
     updatesInterval = 3,
@@ -58,6 +57,9 @@ let boosterTTL = null,
     transferInterval = 36e2,
     transferLastTime = 0,
     conserver = 3;
+	temp1 = 0;
+	temp2 = 0;
+	temp3 = 0;
 
 
 let vConinWS = new VCoinWS();
@@ -175,12 +177,16 @@ vConinWS.onReceiveDataEvent(async (place, score, tick) => {
 			}
 		}
 
-        if (updatesEv && !rand(0, 1) && (Math.floor(Date.now() / updatespeedms) - updatesLastTime > updatesInterval)) {
+        if (updatesEv && !rand(0, 1) && (Math.floor(Date.now() / 1000) - updatesLastTime > updatesInterval)) {
             con(updatesEv + "\n\t\t\t Введите \'hideupd(ate)\' для скрытия уведомления.", "white", "Red");
-            updatesLastTime = Math.floor(Date.now() / updatespeedms);
+            updatesLastTime = Math.floor(Date.now() / 1000);
         }
-	
-        con("Позиция в топе: " + place + "\tКоличество коинов: " + formateSCORE(score, true), "yellow");
+		temp2 = Math.floor(Date.now()/1000);
+		temp3 = (temp2 - temp1) % updatespeedms
+		if(temp3 == 0){
+			con("Позиция в топе: " + place + "\tКоличество коинов: " + formateSCORE(score, true), "yellow");
+		}
+        
         //con("Скорость коинов: " + formateSCORE(tick, true) + " коинов / тик.");
 	}
 });
@@ -200,7 +206,7 @@ vConinWS.onUserLoaded((place, score, items, top, firstTime, tick) => {
     con("Скорость коинов: " + formateSCORE(tick, true) + " коинов / тик.");
     miner.setActive(items);
     miner.updateStack(items);
-
+	temp1 = Math.floor(Date.now()/1000);
     boosterTTL && clearInterval(boosterTTL);
     boosterTTL = setInterval(_ => {
         rand(0, 5) > 3 && vConinWS.click();

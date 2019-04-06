@@ -37,7 +37,7 @@ let USER_ID = false;
 let vk = new VK();
 let URLWS = false;
 let boosterTTL = null,
-	updatespeedms = 4;
+	updatespeed = 4;
 	advertDisp = true,
     tryStartTTL = null,
     updatesEv = false,
@@ -182,7 +182,7 @@ vConinWS.onReceiveDataEvent(async (place, score, tick) => {
             updatesLastTime = Math.floor(Date.now() / 1000);
         }
 		temp2 = Math.floor(Date.now()/1000);
-		temp3 = (temp2 - temp1) % updatespeedms
+		temp3 = (temp2 - temp1) % updatespeed
 		if(temp3 == 0){
 			con("Позиция в топе: " + place + "\tКоличество коинов: " + formateSCORE(score, true), "yellow");
 		}
@@ -605,9 +605,9 @@ if (!DONEURL || tforce) {
 function formatWSS(LINK) {
     let GSEARCH = url.parse(LINK),
         NADDRWS = GSEARCH.protocol.replace("https:", "wss:").replace("http:", "ws:") + "//" + GSEARCH.host + "/channel/",
-        CHANNEL = USER_ID % 16;
+        CHANNEL = USER_ID % 32;
     // URLWS = NADDRWS + CHANNEL + GSEARCH.search + "&ver=1&pass=".concat(Entit.hashPassCoin(USER_ID, 0));
-    URLWS = NADDRWS + CHANNEL + GSEARCH.search + "&pass=".concat(Entit.hashPassCoin(USER_ID, 0));
+    URLWS = NADDRWS + CHANNEL + "/" + GSEARCH.search + "&ver=1&pass=".concat(Entit.hashPassCoin(USER_ID, 0));
     switch (conserver) {
         case 1:
             URLWS.replace("coin.vkforms.ru", "coin.w5.vkforms.ru");

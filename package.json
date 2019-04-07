@@ -1,7 +1,7 @@
 {
-  "name": "vcoinx",
-  "version": "1.3.0",
-  "description": "VCoin modification w/o comission and donate ask.",
+  "name": "package",
+  "version": "1.0.1",
+  "description": "legacy",
   "main": "index.js",
   "dependencies": {
     "colors": "^1.3.3",
@@ -17,20 +17,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cursedseal/VCoinX.git"
+    "url": "git+https://github.com/Inzilkin/VCoinXLEGACYOLD.git"
   },
   "keywords": [
-    "vk",
-    "coin",
-    "x",
-    "vcoinx",
-    "vkcoin",
-    "bot"
+    "legacy"
   ],
-  "author": "cursedseal",
+  "author": "Inzilkin",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/cursedseal/VCoinX/issues"
+    "url": "https://github.com/Inzilkin/VCoinXLEGACYOLD/issues"
   },
-  "homepage": "https://github.com/cursedseal/VCoinX#readme"
+  "homepage": "https://github.com/Inzilkin/VCoinXLEGACYOLD#readme"
 }

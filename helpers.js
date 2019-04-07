@@ -15,8 +15,10 @@ let checkUpdateTTL = null,
     askInTTL = null,
     onUpdatesCB = false,
     offColors = false;
-
-function formateSCORE(e) {
+function getVersion() {
+    return pJson.version;
+}
+function formatScore(e) {
     return (arguments.length > 1 && void 0 !== arguments[1] && arguments[1]) ?
         function(e, t, n, a) {
             var r, o, c, s, i;
@@ -146,6 +148,11 @@ function writeFileAsync(path, data) {
 function appendFileAsync(path, data) {
     return new Promise((resolve, reject) => fs.appendFile(path, data, err => resolve(err)));
 }
+function setTerminalTitle(title) {
+    process.stdout.write(
+        String.fromCharCode(27) + "]0;" + title + String.fromCharCode(7)
+    );
+}
 function beep() {
     process.stdout.write('\x07');
 }
@@ -155,12 +162,14 @@ module.exports = {
     ccon,
     setColorsM,
     offColors,
-    formateSCORE,
+    formatScore,
     hashPassCoin,
     existsFile,
     existsAsync,
     writeFileAsync,
     appendFileAsync,
+    setTerminalTitle,
+    getVersion,
     infLog,
     rand,
 	beep,

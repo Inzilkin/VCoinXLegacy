@@ -55,8 +55,7 @@ class VCoinWS {
                         clearTimeout(this.callbackForPackId[pid].ttl)
 
                         this.callbackForPackId[pid].ttl = setTimeout(function() {
-                            this.callbackForPackId[pid].reject(new Error("TIMEOUT"))
-                            this.dropCallback(pid)
+                            return;
                         }, 1e4)
                     }
                 };
@@ -170,6 +169,11 @@ class VCoinWS {
                         if (this.onChangeOnlineCallback)
                             this.onChangeOnlineCallback(parseInt(t.replace("WAIT_FOR_LOAD ", ""), 10));
                     }
+                    if (0 === t.indexOf("MSG")) {
+                            this.retryTime = 3e5;
+                            if (this.onMessageEventCallback)
+                            this.onMessageEventCallback(t.replace("MSG ", ""));
+                        }
                     if (0 === t.indexOf("SELF_DATA")) {
 
                         let data = t.replace("SELF_DATA ", "").split(" ");
@@ -280,6 +284,9 @@ class VCoinWS {
     }
     onWaitEvent(e) {
         this.onWaitLoadCallback = e
+    }
+    onMessageEvent(e) {
+        this.onMessageEventCallback = e
     }
     onAlreadyConnected(e) {
         this.onAlredyConnectedCallback = e
@@ -516,7 +523,7 @@ class Miner {
         this.stack.forEach(function(e) {
             let n = e.value,
                 a = e.count;
-            total += Entit.items[n].amount * a;
+            //total += Entit.items[n].amount * a;
         });
 
         this.total = total;

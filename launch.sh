@@ -1,3 +1,3 @@
 #! /bin/sh
-node index.js
+npm i && node index.js 
 exit 0

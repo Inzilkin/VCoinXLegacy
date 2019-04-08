@@ -107,22 +107,12 @@ class VCoinWS {
                         this.oldScore = score;
                         this.oldPlace = place;
 
-                        this.onMyDataCallback && this.onMyDataCallback(place, score);
-                        this.onUserLoadedCallback && this.onUserLoadedCallback(place, score, items, top, firstTime, tick);
-
-                        this.tick = parseInt(tick, 10);
-                        this.tickTtl = setInterval(_ => {
-                            this.onTickEvent();
-                        }, 1e3);
-
-                        this.ccp = ccp || this.ccp;
-
                         if (pow)
                             try {
                                let x = safeEval(pow, {
 								  window: {
 								    location: {
-								      host: 'vk.ru'
+								      host: 'vk.com'
 								    },
                     navigator: {
                       userAgent: 'Mozilla/5.0 (Windows; U; Win98; en-US; rv:0.9.2) Gecko/20010725 Netscape6/6.1'
@@ -136,12 +126,20 @@ class VCoinWS {
                             } catch (e) {
                                 console.error(e);
                             }
+                        this.onUserLoadedCallback && this.onUserLoadedCallback(place, score, items, top, firstTime, tick);
+                        this.onMyDataCallback && this.onMyDataCallback(place, score);
+                        this.tick = parseInt(tick, 10);
+                        this.tickTtl = setInterval(_ => {
+                            this.onTickEvent();
+                        }, 1e3);
+                        this.ccp = ccp || this.ccp;
                     }
                 } else if (-1 === t.indexOf("SELF_DATA") &&
                     -1 === t.indexOf("WAIT_FOR_LOAD") &&
                     -1 === t.indexOf("MISS") &&
                     -1 === t.indexOf("TR") &&
                     -1 === t.indexOf("BROKEN") &&
+                    -1 === t.indexOf("ALREADY_CONNECTED") &&
                     "C" !== t[0] && "R" !== t[0])
                     console.log("on Message:\n", t);
 
@@ -223,8 +221,8 @@ class VCoinWS {
             this.connecting = true;
 
         } catch (e) {
-            console.error(e)
-            this.reconnect(wsServer)
+            console.error(e);
+            this.reconnect(wsServer);
         }
     }
 
@@ -237,8 +235,8 @@ class VCoinWS {
 
     close() {
         this.allowReconnect = false
-        clearTimeout(this.ttl)
-        clearInterval(this.tickTtl)
+        clearTimeout(this.ttl);
+        clearInterval(this.tickTtl);
         this.selfClose()
     }
 
@@ -515,7 +513,14 @@ class Miner {
         });
         return Entit.calcPrice(price, count + 1);
     }
-
+    getItemCount(e) {
+        let count = 0;
+        this.stack.forEach(el => {
+            if (el.value === e)
+                count = el.count;
+        });
+        return count;
+    }
     updateStack(items) {
         this.stack = Entit.generateStack(items.filter(e => ("bonus" !== e && "vkp1" !== e && "vkp2" !== e)));
 

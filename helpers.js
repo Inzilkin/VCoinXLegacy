@@ -15,6 +15,13 @@ let checkUpdateTTL = null,
     askInTTL = null,
     onUpdatesCB = false,
     offColors = false;
+function clearlog(){
+    var lines = process.stdout.getWindowSize()[1];
+for(var i = 0; i < lines; i++) {
+    console.log('\r\n');
+}
+    return;
+}
 function getVersion() {
     return pJson.version;
 }
@@ -156,6 +163,13 @@ function setTerminalTitle(title) {
 function beep() {
     process.stdout.write('\x07');
 }
+function removeLetters(e) {
+    return parseInt(e.replace(/\D+/g, ""));
+}
+
+function mathPrice(price, count) {
+    return count <= 1 ? price : Math.ceil(1.3 * mathPrice(price, count - 1))
+}
 module.exports = {
     rl,
     con,
@@ -170,7 +184,9 @@ module.exports = {
     appendFileAsync,
     setTerminalTitle,
     getVersion,
+    clearlog,
     infLog,
     rand,
 	beep,
+    mathPrice,
 }

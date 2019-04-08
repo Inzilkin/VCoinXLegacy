@@ -24,8 +24,10 @@ const {
     getVersion,
     infLog,
     rand,
+    clearlog,
     onUpdates,
 	beep,
+    mathPrice,
 } = require('./helpers');
 
 let {
@@ -39,6 +41,7 @@ let USER_ID = false;
 let vk = new VK();
 let URLWS = false;
 let boosterTTL = null,
+    autooffline = -1;
 	updatespeed = 2;
 	advertDisp = false,
     tryStartTTL = null,
@@ -47,13 +50,15 @@ let boosterTTL = null,
     updatesLastTime = 0,
     xRestart = true,
     flog = false,
+    waitForBoost = true,
     offColors = false,
     autoBuy = false,
     autoBuyItems = ["quantum_pc", "datacenter"],
 	smartBuyItem = "",
 	smartBuy = false,
 	autobeep = false;
-    limitCPS = 25000
+    limitCPS = 50000;
+    hidejunk = false;
     tforce = false,
     transferTo = false,
     transferCoins = 3e4,
@@ -64,7 +69,15 @@ let boosterTTL = null,
 	temp2 = 0;
 	temp3 = 0;
 
-
+var tempDataUpdate = {
+    canSkip: false,
+    itemPrice: null,
+    itemName: null,
+    transactionInProcesS: false,
+    percentForBuy: 100,
+    tmpPr: null,
+    onBrokenEvent: true,
+};
 let vCoinWS = new VCoinWS();
 
 
@@ -124,62 +137,19 @@ vCoinWS.onReceiveDataEvent(async (place, score, tick) => {
                         } catch (e) {}
                     } catch (e) {
                         if (e.message == "NOT_ENOUGH_COINS") con("Недостаточно средств для покупки", true);
+                        else if (e.message == "ITEM NOT FOUND") con("Предмет не найден.", true);
                         else con(e.message, true);
                     }
                 }
             }
         }
 
-				if(smartBuy && vCoinWS.tick <= limitCPS && score > 0) {
-			var prices = justPrices();
-			prices[0] *= 1000;
-			prices[1] = Math.floor(prices[1] / 3) * 1000;
-			prices[2] *= 100;
-			prices[3] = Math.floor(prices[3] / 3) * 100;
-			prices[4] *= 10;
-			prices[5] *= 2;
-			min = Math.min.apply(null, prices);
-			good = prices.indexOf(min);
-			switch (good) {
-				case 0:
-					smartBuyItem = "cursor";
-					break;
-				case 1:
-					smartBuyItem = "cpu";
-					break;
-				case 2:
-					smartBuyItem = "cpu_stack";
-					break;
-				case 3:
-					smartBuyItem = "computer";
-					break;
-				case 4:
-					smartBuyItem = "server_vk";
-					break;
-				case 5:
-					smartBuyItem = "quantum_pc";
-					break;
-				case 6:
-					smartBuyItem = "datacenter";
-					break;
-				default:
-					smartBuyItem = "datacenter";
-			}
-            if (advertDisp == 0x1)
+		if (smartBuy && vCoinWS.tick <= limitCPS && score > 0)
+        smartBuyFunction(score);
+        if (advertDisp == 0x1)
             process.exit();
-			if(miner.hasMoney(smartBuyItem)) {
-				try {
-					result = await vCoinWS.buyItemById(smartBuyItem);
-					miner.updateStack(result.items);
-					let template = "Умной покупкой был приобретен " + Entit.titles[smartBuyItem];
-                    con("Новая скорость: " + formatScore(result.tick, true) + " коинов / тик.");					con(template, "black", "Green");
-					try { await infLog(template); } catch(e) {}
-				} catch(e) {
-					if(e.message == "NOT_ENOUGH_COINS") con("Недостаточно средств для покупки "+Entit.titles[smartBuyItem]+"a", true);
-					else con(e.message, true);
-				}
-			}
-		}
+         if (!hidejunk)
+            con("Позиция в топе: " + place + "\tКоличество коинов: " + formatScore(score, true) + "\tСкорость: " + formatScore(vCoinWS.tick, true) + " коинов / тик.", "yellow");
 
         if (updatesEv && !rand(0, 1) && (Math.floor(Date.now() / 1000) - updatesLastTime > updatesInterval)) {
             con(updatesEv + "\n\t\t\t Введите \'hideupd(ate)\' для скрытия уведомления.", "white", "Red");
@@ -190,6 +160,13 @@ vCoinWS.onReceiveDataEvent(async (place, score, tick) => {
 		if(temp3 == 0){
 			con("Позиция в топе: " + place + "\tКоличество коинов: " + formatScore(score, true) + "\tСкорость: " + formatScore(vCoinWS.tick, true) + " коинов / тик.", "yellow");
 		}
+        if(temp2 * 60 == autooffline){
+            xRestart = false;
+            if (autobeep)
+            beep();
+            vCoinWS.close();
+            break;
+        }
         
 	}
 });
@@ -210,17 +187,17 @@ vCoinWS.onUserLoaded((place, score, items, top, firstTime, tick) => {
     miner.setActive(items);
     miner.updateStack(items);
 	temp1 = Math.floor(Date.now()/1000);
-    boosterTTL && clearInterval(boosterTTL);
+    if(boosterTTL)
+        clearInterval(boosterTTL);
     if (!advertDisp)
     {
     ccon("VC" + "oi"+ "nX " + "\u0441\u043F\u043E\u043D\u0441\u0438\u0440\u0443\u0435\u0442\u0441\u044F \u0441\u0430\u0439\u0442\u043E\u043C " + "lo" + "lz" + "te" + "am." + "ne" + "t - \u0444\u043E\u0440\u0443\u043C \u043E\u0431 \u0438\u0433\u0440\u0430\u0445 \u0438 \u0447\u0438\u0442\u0430\u0445, \u0445\u0430\u043A \u0440\u0430\u0437\u0434\u0435\u043B\u044B, \u0431\u0440\u0443\u0442\u044B \u0438 \u0447\u0435\u043A\u0435\u0440\u044B, \u0441\u043F\u043E\u0441\u043E\u0431\u044B \u0437\u0430\u0440\u0430\u0431\u043E\u0442\u043A\u0430 \u0438 \u0440\u0430\u0437\u0434\u0430\u0447\u0438 \u0431\u0430\u0437.", "black", "Green");
     advertDisp = true;
     advertDisp = !advertDisp ? 2 : 3
     }
-    boosterTTL = setInterval(_ => {
-        rand(0, 5) > 3 && vCoinWS.click();
+            if(rand(0, 5) > 3)
+            vCoinWS.click();
     }, 5e2);
-});
 
 vCoinWS.onBrokenEvent(_ => {
     con("onBrokenEvent", true);
@@ -261,7 +238,8 @@ async function startBooster(tw) {
 
 function forceRestart(t, force) {
     vCoinWS.close();
-    boosterTTL && clearInterval(boosterTTL);
+        if (boosterTTL)
+        clearInterval(boosterTTL);
     if (xRestart || force)
         startBooster(t);
 }
@@ -269,7 +247,7 @@ function forceRestart(t, force) {
 function lPrices(d) {
     let temp = "";
     temp += Entit.names.map(el => {
-    return !miner.hasMoney(el) && d ? "" : "\n> [" + el + "] " + Entit.titles[el] + " - " + formatScore(miner.getPriceForItem(el), true);
+    return !miner.hasMoney(el) && d ? "" : "\n> [" + el + "] " + Entit.titles[el] + " (" + miner.getItemCount(el) + " > " + (miner.getItemCount(el) + 1) + ") - " + formatScore(miner.getPriceForItem(el)) + " коинов";
     });
     return temp;
 }
@@ -289,7 +267,11 @@ rl.on('line', async (line) => {
     switch (line.trim().toLowerCase()) {
         case '':
             break;
-
+        case "clr":
+        case "clear":
+            clearlog();
+            console.log("Лог успешно очищен!");
+            break
         case 'debuginformation':
         case 'debuginfo':
         case 'debug':
@@ -352,20 +334,20 @@ rl.on('line', async (line) => {
                     delete result.items;
                 con("Новая скорость: " + formatScore(result.tick, true) + " коинов / тик.");
             } catch (e) {
-                if (e.message == "NOT_ENOUGH_COINS") con("Недостаточно средств.", true);
-                else if (e.message == "ITEM NOT FOUND") con("Предмет не найден.", true);
+                if (e.message == "NOT_ENOUGH_COINS") con("Недостаточно средств для приобретения.", true);
+                else if (e.message == "ITEM NOT FOUND") con("Предмет не найден.", true);                
                 else con(e.message, true);
             }
             break;
 
         case 'autobuyitem':
             item = await rl.questionAsync("Введи название ускорения для автоматической покупки [cursor, cpu, cpu_stack, computer, server_vk, quantum_pc, datacenter]: ");
-            var array = item.split(" ");
-            for (var i = 0; i < array.length; i++) {
-                if (!item || !Entit.titles[array[i]]) return;
-                con("Для автоматической покупки установлено ускорение: " + Entit.titles[array[i]]);
+            var autobuyarray = item.split(" ");
+            for (var i = 0; i < autobuyarray.length; i++) {
+                if (!item || !Entit.titles[autobuyarray[i]]) return;
+                con("Для автоматической покупки установлено ускорение: " + Entit.titles[autobuyarray[i]]);
             }
-            autoBuyItems = array;
+            autoBuyItems = autobuyarray;
             break;
         case 'setcps':
         case 'scp':
@@ -425,6 +407,11 @@ rl.on('line', async (line) => {
         case 'transfer':
             let count = await rl.questionAsync("Количество: ");
             let id = await rl.questionAsync("ID получателя: ");
+            let userinfo = (await vk.api.users.get({
+                user_ids: id
+            }));
+            id = userinfo[0].id;
+            console.log("Вы собираетесь перевести перевести " + formatScore(count * 1e3, true) + " коин(а)(ов) пользователю [" + userinfo[0].first_name + " " + userinfo[0].last_name + '] (@id' + userinfo[0].id + ').');
             let conf = await rl.questionAsync("Вы уверены? [yes]: ");
             id = parseInt(id.replace(/\D+/g, ""));
             if (conf.toLowerCase() != "yes" || !id || !count) return con("Отправка неудачная, вероятно, один из параметров не был указан.", true);
@@ -441,11 +428,28 @@ rl.on('line', async (line) => {
                 else con(e.message, true);
             }
             break;
+        case 'psb':
+        case 'pfsb':
+        case 'percforsmartbuy':
+        case 'percentforsmartbuy':
+            var proc = await rl.questionAsync("Введи процентное соотношение, выделяемое под SmartBuy: ");
+            if (parseInt(proc))
+                if (parseInt(proc) > 0 && parseInt(proc) <= 100) {
+                    tempDataUpdate.percentForBuy = parseInt(proc);
+                    tempDataUpdate.tmpPr = null;
+                    tempDataUpdate.canSkip = false;
+                }
+            break;
 
+        case 'tokeninfo':
+            ccon("Ваш токен: " + VK_TOKEN); 
+            break;
+            
         case "?":
         case "help":
             ccon("-- VCoinX --", "red");
             ccon("info - отображение основной информации.");
+            ccon("tokeninfo - отображение вашего токена.");
             ccon("debug - отображение тестовой информации.");
             ccon("stop(pause)	- остановка майнера.");
             ccon("start(run)	- запуск майнера.");
@@ -458,7 +462,9 @@ rl.on('line', async (line) => {
             ccon("tsum - указать сумму для авто-перевода (без запятой).");
 			ccon("autobuy - изменить статус авто-покупки.");
             ccon("autobuyitem - указать предмет(ы) для авто-покупки.");
+            ccon("setlimit(sl) - установить лимит коинов / тик, до которого будет рабоать авто и умная покупка.");
             ccon("smartbuy - изменить статус умной покупки.")
+            ccon("percentforsmartbuy - процент средств, выделяемый для приобретений улучшений с помощью умной покупки.");
             ccon("color - изменить цветовую схему консоли.");
             break;
     }
@@ -526,7 +532,15 @@ for (var argn = 2; argn < process.argv.length; argn++) {
             {
                 if (dTest.length >= 1 && dTest.length < 10) {
                     transferCoins = parseInt(dTest);
-                    con("Установлено количество коинов для автоматического перевода: " + transferCoins + " коинов.");
+                    argn++;
+                }
+                break;
+            }
+        case '-tperc':
+        case '-tpercent':
+            {
+                if (dTest.length >= 1 && dTest.length < 10) {
+                    transferPercent = parseInt(dTest);
                     argn++;
                 }
                 break;
@@ -554,10 +568,28 @@ for (var argn = 2; argn < process.argv.length; argn++) {
             }
 
 
-    case '-smartbuy':
+        case '-smartbuy':
             {
+                 if (parseInt(dTest)) {
+                   if (parseInt(dTest) > 0 && parseInt(dTest) <= 100) tempDataUpdate.percentForBuy = parseInt(dTest);
+                }
                 smartBuy = true;
                 autoBuy = false;
+                break;
+            }
+        case '-sl':
+        case '-setlimit':
+            {
+                if (dTest.length >= 1 && dTest.length < 10) {
+                    limitCPS = parseInt(dTest);
+                    argn++;
+                }
+                break;
+            }
+        case '-ab':
+        case '-autobeep':
+            {
+                autobeep = true;
                 break;
             }
     case '-h':
@@ -581,6 +613,64 @@ for (var argn = 2; argn < process.argv.length; argn++) {
             con('Unrecognized param: ' + cTest + ' (' + dTest + ') ');
             break;
     }
+}
+
+    async function smartBuyFunction(score) {
+        if (tempDataUpdate.tmpPr == null) {
+        tempDataUpdate.tmpPr = 100 / tempDataUpdate.percentForBuy;
+    }
+    if (!tempDataUpdate.transactionInProcess && !tempDataUpdate.onBrokenEvent) {
+        var names = ["cursor", "cpu", "cpu_stack", "computer", "server_vk", "quantum_pc", "datacenter"];
+        var count = [1000, 333, 100, 34, 10, 2, 1];
+        if (!tempDataUpdate["canSkip"]) {
+            var prices = justPrices();
+            Object.keys(count).forEach(function(id) {
+                prices[id] = mathPrice(prices[id], count[id]);
+            });
+            min = Math.min.apply(null, prices);
+            good = prices.indexOf(min);
+            canBuy = names[good];
+            con("Умной покупкой было проанилизировано, что выгодно будет приобрести улучшение " + Entit.titles[canBuy] + ".", "green", "Black");
+            con("Стоимость: " + formatScore(min, true) + " коинов за " + count[good] + " шт.", "green", "Black");
+        } else {
+            min = tempDataUpdate.itemPrice;
+            canBuy = tempDataUpdate.itemName;
+        }
+        if ((score - min) * tempDataUpdate.tmpPr > 0) {
+            tempDataUpdate.canSkip = false;
+            tempDataUpdate.transactionInProcess = true;
+            try {
+                var countBuy = count[names.indexOf(canBuy)];
+                while (countBuy) {
+                    try {
+                        result = await vCoinWS.buyItemById(canBuy);
+                        miner.updateStack(result.items);
+                        countBuy--;
+                    } catch (e) {
+                        if (!e.message == "ANOTHER_TRANSACTION_IN_PROGRESS") {
+                            throw e;
+                            tempDataUpdate.transactionInProcess = false;
+                            break;
+                        }
+                    }
+                }
+                let template = "Умной покупкой был приобритен " + Entit.titles[canBuy] + " в количестве " + count[names.indexOf(canBuy)] + " шт.";
+                tempDataUpdate.transactionInProcess = false;
+                con(template, "green", "Black");
+                try {
+                    await infLog(template);
+                } catch (e) {}
+            } catch (e) {
+                if (e.message == "NOT_ENOUGH_COINS") con("Недостаточно средств для покупки " + Entit.titles[canBuy] + "a", true);
+                else con(e.message, true);
+            }
+        } else {
+            tempDataUpdate.canSkip = true;
+            tempDataUpdate.itemPrice = min;
+            tempDataUpdate.itemName = canBuy;
+        }
+    }
+    tempDataUpdate.onBrokenEvent = false;
 }
 
 if (!DONEURL || tforce) {
@@ -611,6 +701,11 @@ if (!DONEURL || tforce) {
             startBooster();
 
         } catch (error) {
+            if (error.code && error.code == 5)
+                ccon('Указан некорректный токен пользователя! Перепроверьте токен или получите новый, как указано в данном руководстве -> github.com/cursedseal/VCoinX', true, true, false);
+            else if (error.code && (error.code == 'ECONNREFUSED' || error.code == 'ENOENT'))
+                ccon('Не удалось подключиться API! Попробуйте перезагрузить роутер или установить VPN.', true, true, false);
+            else
             console.error('API Error:', error);
             process.exit();
         }
